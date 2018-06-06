@@ -16,6 +16,79 @@ extern "C"
 // 初始化标记
 BOOL CGFFX::m_fInitialize = FALSE;
 
+#define  FLG_BMP 1
+#define  MAX_IMG_SIZE 10*1024*1024
+
+int simplest_bgr24_to_bmp(unsigned char*pSrcBuffer, int iBufferLen, int width, int height, unsigned char * pDestBuffer, int* OutPutLength)
+{
+	typedef struct
+	{
+		long imageSize;
+		long blank;
+		long startPosition;        
+	}BmpHead;
+
+	typedef struct
+	{
+		long  Length;
+		long  width;
+		long  height;
+		unsigned short  colorPlane;
+		unsigned short  bitColor;
+		long  zipFormat;
+		long  realSize;
+		long  xPels;
+		long  yPels;
+		long  colorUse;
+		long  colorImportant;
+	}InfoHead;
+
+	//int i = 0, j = 0;
+	BmpHead m_BMPHeader = { 0, 0, 0 };
+
+	InfoHead  m_BMPInfoHeader = { 0 , 0 , 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	char bfType[2] = { 'B', 'M' };
+	int header_size = sizeof(bfType)+sizeof(BmpHead)+sizeof(InfoHead);
+	unsigned char *rgb24_buffer = pSrcBuffer;
+	unsigned char *pDest = pDestBuffer;
+
+	m_BMPHeader.imageSize = 3 * width*height + header_size;
+	m_BMPHeader.startPosition = header_size;
+
+	m_BMPInfoHeader.Length = sizeof(InfoHead);
+	m_BMPInfoHeader.width = width;
+	//BMP storage pixel data in opposite direction of Y-axis (from bottom to top).  
+	m_BMPInfoHeader.height = -height;
+	m_BMPInfoHeader.colorPlane = 1;
+	m_BMPInfoHeader.bitColor = 24;
+	m_BMPInfoHeader.realSize = 3 * width*height;
+
+	memcpy(pDest, bfType, sizeof(bfType));
+	pDest += sizeof(bfType);
+	memcpy(pDest, &m_BMPHeader, sizeof(m_BMPHeader));
+	pDest += sizeof(m_BMPHeader);
+	memcpy(pDest, &m_BMPInfoHeader, sizeof(m_BMPInfoHeader));
+	pDest += sizeof(m_BMPInfoHeader);
+
+	memcpy(pDest, rgb24_buffer, iBufferLen);
+
+	*OutPutLength = 3 * width*height + sizeof(bfType)+sizeof(m_BMPHeader)+sizeof(m_BMPInfoHeader);
+
+	//BMP save R1|G1|B1,R2|G2|B2 as B1|G1|R1,B2|G2|R2  
+	//It saves pixel data in Little Endian  
+	//So we change 'R' and 'B'  
+	//for (j = 0; j<height; j++){
+	//    for (i = 0; i<width; i++){
+	//        char temp = rgb24_buffer[(j*width + i) * 3 + 2];
+	//        rgb24_buffer[(j*width + i) * 3 + 2] = rgb24_buffer[(j*width + i) * 3 + 0];
+	//        rgb24_buffer[(j*width + i) * 3 + 0] = temp;
+	//    }
+	//}
+
+	return 0;
+}
+
+
 CGFFX::CGFFX()
 {
     m_hPlayThread = NULL;
@@ -38,6 +111,10 @@ CGFFX::CGFFX()
     m_pSws = NULL;
     m_pBmp = NULL;
 
+	m_pSrcImg = NULL;
+	m_pDestImg = NULL;
+
+	InitializeCriticalSection(&m_csDecode);
     m_hQueue = gvp_create_new_queue();
 }
 
@@ -45,6 +122,18 @@ CGFFX::~CGFFX(void)
 {
     Stop();
     gvp_delete_queue(m_hQueue);
+	DeleteCriticalSection(&m_csDecode);
+
+	if (m_pSrcImg)
+	{
+		delete[] m_pSrcImg;
+		m_pSrcImg = NULL;
+	}
+	if (m_pDestImg)
+	{
+		delete[] m_pDestImg;
+		m_pDestImg = NULL;
+	}
 }
 
 // 视频库初始化
@@ -110,24 +199,52 @@ VOID CGFFX::Stop(VOID)
     m_hWnd = NULL;
 
     // 停止播放线程
-    while (NULL != m_hPlayThread && WAIT_OBJECT_0 != MsgWaitForMultipleObjects(1, &m_hPlayThread, FALSE, 100, QS_ALLINPUT)) // INFINITE
-    {
-        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
+    //while (NULL != m_hPlayThread && WAIT_OBJECT_0 != MsgWaitForMultipleObjects(1, &m_hPlayThread, FALSE, 100, QS_ALLINPUT)) // INFINITE
+    //{
+    //    if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+    //    {
+    //        TranslateMessage(&msg);
+    //        DispatchMessage(&msg);
+    //    }
+    //}
 
     // 停止解压线程
-    while (NULL != m_hH264Thread && WAIT_OBJECT_0 != MsgWaitForMultipleObjects(1, &m_hH264Thread, FALSE, 100, QS_ALLINPUT))
-    {
-    	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-    	{
-    		TranslateMessage(&msg);
-    		DispatchMessage(&msg);
-    	}
-    }
+    //while (NULL != m_hH264Thread && WAIT_OBJECT_0 != MsgWaitForMultipleObjects(1, &m_hH264Thread, FALSE, 100, QS_ALLINPUT))
+    //{
+    //	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+    //	{
+    //		TranslateMessage(&msg);
+    //		DispatchMessage(&msg);
+    //	}
+    //}
+
+	DWORD dwRet = -1;
+	while (NULL != m_hPlayThread && WAIT_OBJECT_0 != dwRet) // INFINITE
+	{
+		dwRet = MsgWaitForMultipleObjects(1, &m_hPlayThread, FALSE, 100, QS_ALLINPUT);
+		if (dwRet == WAIT_OBJECT_0 + 1)
+		{
+			if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+		}
+	}
+
+	dwRet = -1;
+	while (NULL != m_hPlayThread && WAIT_OBJECT_0 != dwRet) // INFINITE
+	{
+		dwRet = MsgWaitForMultipleObjects(1, &m_hH264Thread, FALSE, 100, QS_ALLINPUT);
+		if (dwRet == WAIT_OBJECT_0 + 1)
+		{
+			if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+		}
+	}
 
     if (m_hPlayThread != NULL)
     {
@@ -343,6 +460,7 @@ DWORD WINAPI CGFFX::OnRTSPReceiveThread(VOID* pContext)
             pThis->m_pReceivePacket = NULL;
         }
     }
+	OutputDebugString("Exit OnRTSPReceiveThread.\n");
     return 0;
 }
 
@@ -380,18 +498,27 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
     {	
         // 等待数据
         gvp_dequeue(pThis->m_hQueue, (void **)&pThis->m_pDecodePacket, &pk_size, 1);
-        if (NULL == pThis->m_pDecodePacket) {
+        if (NULL == pThis->m_pDecodePacket) {      
             continue;
         }
         pThis->m_fDecoding = TRUE;
 
         // 解码显示
+		EnterCriticalSection(&pThis->m_csDecode);
+		int iDecode = 0;
+		if(NULL != pThis->m_pContext)
+		{
+			iDecode = avcodec_decode_video2(pThis->m_pContext, pThis->m_pFrame, &got_picture, pThis->m_pDecodePacket);
+		}
+		LeaveCriticalSection(&pThis->m_csDecode);
+
         if (pThis->m_fConnect
-            && NULL != pThis->m_hWnd
+            && NULL != pThis->m_hWnd 
             && IsWindow(pThis->m_hWnd)
             && IsWindowVisible(pThis->m_hWnd)
-            && NULL != pThis->m_pContext
-            && 0 < avcodec_decode_video2(pThis->m_pContext, pThis->m_pFrame, &got_picture, pThis->m_pDecodePacket) 
+			&& NULL != pThis->m_pContext
+            && 0 < iDecode
+			
             && got_picture)
         {
             pFrameYUV = NULL;
@@ -464,6 +591,69 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
                     frameFormat, w, h, PIX_FMT_BGR24, SWS_BILINEAR, NULL, NULL, NULL);
             }
 
+			static int iTryTime  = 0;
+			if (pThis->m_pDestImg == NULL)
+			{
+				pThis->m_pDestImg = new BYTE[MAX_IMG_SIZE];
+			}
+			if (pThis->m_pSrcImg == NULL)
+			{
+				pThis->m_pSrcImg = new BYTE[MAX_IMG_SIZE];
+			}
+			if (iTryTime++ > 50)
+			{
+				SwsContext* pTempSws= NULL;
+				// 缩放	
+				pTempSws = sws_getContext(iFrameWidth, iFrameHeight, 
+					frameFormat, iFrameWidth, iFrameHeight, PIX_FMT_BGR24, SWS_BILINEAR, NULL, NULL, NULL);	
+
+				if (pThis->m_pSrcImg )
+				{
+					memset(pThis->m_pSrcImg, 0, MAX_IMG_SIZE);
+				}
+				if (pTempSws)
+				{
+					BYTE* data[4] = {pThis->m_pSrcImg, 0, 0, 0};
+					INT  pitch[4] = {3 * iFrameWidth, 0, 0, 0};
+					sws_scale(pTempSws, pFrameYUV->data, pFrameYUV->linesize, 0, iFrameHeight, data, pitch);
+
+					if (pThis->m_pDestImg)
+					{
+						memset(pThis->m_pDestImg, 0, MAX_IMG_SIZE);
+					}
+					int iBufferLength = MAX_IMG_SIZE;
+					simplest_bgr24_to_bmp(pThis->m_pSrcImg, iFrameWidth*iFrameHeight*3, iFrameWidth, iFrameHeight, pThis->m_pDestImg, &iBufferLength);
+					if (iBufferLength > 0)
+					{
+						IMG_BMP tempBmpStruct;
+						tempBmpStruct.width = iFrameWidth;
+						tempBmpStruct.height = iFrameHeight;
+						tempBmpStruct.ImgLength = iBufferLength;
+						tempBmpStruct.pData = pThis->m_pDestImg;
+
+						pThis->m_lBmplist.AddOneIMG(&tempBmpStruct);
+						tempBmpStruct.pData = NULL;
+
+						//char chFileName[256] = {0};
+						//sprintf(chFileName, "./%ld.bmp", GetTickCount());
+						//FILE* pFile = fopen(chFileName, "w");
+						//if (pFile)
+						//{
+						//	fwrite(pThis->m_pDestImg, iBufferLength, 1, pFile);
+						//	fclose(pFile);
+						//	pFile = NULL;
+						//}
+					}
+				}
+				iTryTime = 0;
+
+				if (NULL != pTempSws) 
+				{
+					sws_freeContext(pTempSws);
+					pTempSws = NULL;
+				}
+			}
+			
             // 刷新显示
             if (NULL != pThis->m_pSws)
             {	
@@ -473,12 +663,12 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
                 sws_scale(pThis->m_pSws, pFrameYUV->data, pFrameYUV->linesize, 0, iFrameHeight, data, pitch);
 
                 // 显示
-                if (pThis->m_hWnd != NULL)
-                {
-                    HDC hDC = ::GetDC(pThis->m_hWnd);
-                    SetDIBitsToDevice(hDC, 0, 0, w, h, 0, 0, 0, h, pThis->m_pBmp, (BITMAPINFO *)&hdr, DIB_RGB_COLORS);
-                    ::ReleaseDC(pThis->m_hWnd, hDC);
-                }
+				if (IsWindow(pThis->m_hWnd))
+				{
+					HDC hDC = ::GetDC(pThis->m_hWnd);
+					SetDIBitsToDevice(hDC, 0, 0, w, h, 0, 0, 0, h, pThis->m_pBmp, (BITMAPINFO *)&hdr, DIB_RGB_COLORS);
+					::ReleaseDC(pThis->m_hWnd, hDC);
+				}
             }
 
         }
@@ -526,7 +716,7 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
     {
         avcodec_flush_buffers(pThis->m_pContext);
     }
-
+	OutputDebugString("Exit OnH264DecodeThread.\n");
     return 0;
 }
 
@@ -632,4 +822,36 @@ HRESULT CGFFX::Connect(VOID)
         return E_FAIL;
     }
     return S_OK;
+}
+
+
+bool CGFFX::GetOneBmpImg(PBYTE DestImgData, int& iLength, int& iWidth, int& iHeight)
+{
+	if (!DestImgData)
+	{
+		return false;
+	}
+	IMG_BMP* pTempImg = NULL;
+	pTempImg = m_lBmplist.getOneIMG();
+	if (!pTempImg)
+	{
+		return false;
+	}
+	if (iLength < pTempImg->ImgLength)
+	{
+		iLength = pTempImg->ImgLength;
+		return false;
+	}
+
+	iLength = pTempImg->ImgLength;
+	iWidth = pTempImg->width;
+	iHeight = pTempImg->height;
+	memcpy(DestImgData, pTempImg->pData, pTempImg->ImgLength);
+
+	if (pTempImg)
+	{
+		delete pTempImg;
+		pTempImg = NULL;
+	}
+	return true;
 }

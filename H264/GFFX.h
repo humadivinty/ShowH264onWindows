@@ -11,6 +11,8 @@ extern "C" {
 }
 #endif
 
+#include "MyImgList.h"
+
 class CGFFX
 {
 public:
@@ -20,7 +22,9 @@ public:
 	HRESULT Play(HWND hWnd, LPCSTR szURL);
 	VOID Stop(VOID);
     VOID SetExitStatus();
+	bool GetOneBmpImg(PBYTE DestImgData, int& iLength, int& iWidth, int& iHeight);
 
+	CRITICAL_SECTION m_csDecode;
 protected:
 	HRESULT Connect(VOID);
 
@@ -54,5 +58,10 @@ private:
 	long m_lUserData;
 	long m_lRecordSecond;
 	long m_iStartRecordTime;
+
+
+	PBYTE m_pSrcImg;
+	PBYTE m_pDestImg;
+	MyImgList m_lBmplist;
 };
 

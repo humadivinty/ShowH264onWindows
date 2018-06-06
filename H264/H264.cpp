@@ -33,3 +33,16 @@ VOID WINAPI H264_SetExitStatus(HANDLE hPlay)
         gffx->SetExitStatus();
 	}
 }
+
+H264API bool WINAPI H264_GetOneBmpImg(HANDLE hPlay, PBYTE DestImgData, int& iLength, int& iWidth, int& iHeight)
+{
+	CGFFX* gffx = (CGFFX *)hPlay;
+	if (NULL != gffx)
+	{
+		return gffx->GetOneBmpImg(DestImgData, iLength, iWidth, iHeight);
+	}
+	else
+	{
+		return false;
+	}
+}

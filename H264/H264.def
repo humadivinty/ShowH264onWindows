@@ -3,3 +3,5 @@ EXPORTS
 	H264_Play
 	H264_Destroy
 	H264_SetExitStatus
+
+	H264_GetOneBmpImg

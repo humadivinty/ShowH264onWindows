@@ -20,7 +20,7 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v110_xp</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -57,7 +57,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ws2_32.lib;libgcc.a;libmingwex.a;libx264.a;libavcodec.a;libavutil.a;libavformat.a;libswscale.a;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libmingwex.a;libgcc.a;libx264.a;libavcodec.a;libavutil.a;libavformat.a;libswscale.a;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>H264.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
@@ -83,12 +83,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="H264.APS" />
     <None Include="H264.def" />
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GFFX.h" />
     <ClInclude Include="H264.h" />
+    <ClInclude Include="MyImgList.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -104,6 +106,7 @@
     </ClCompile>
     <ClCompile Include="GFFX.cpp" />
     <ClCompile Include="H264.cpp" />
+    <ClCompile Include="MyImgList.cpp" />
     <ClCompile Include="queue.c" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

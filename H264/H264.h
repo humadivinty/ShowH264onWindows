@@ -15,5 +15,5 @@ H264API VOID WINAPI H264_Destroy(HANDLE hPlay);
 
 // 设置退出，多对象时可减少等待
 H264API VOID WINAPI H264_SetExitStatus(HANDLE hPlay);
-
+H264API bool WINAPI H264_GetOneBmpImg(HANDLE hPlay, PBYTE DestImgData, int& iLength, int& iWidth, int& iHeight);
 #endif // H264_H
