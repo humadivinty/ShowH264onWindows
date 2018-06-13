@@ -198,26 +198,7 @@ VOID CGFFX::Stop(VOID)
     m_fRunning = FALSE;
     m_hWnd = NULL;
 
-    // 停止播放线程
-    //while (NULL != m_hPlayThread && WAIT_OBJECT_0 != MsgWaitForMultipleObjects(1, &m_hPlayThread, FALSE, 100, QS_ALLINPUT)) // INFINITE
-    //{
-    //    if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-    //    {
-    //        TranslateMessage(&msg);
-    //        DispatchMessage(&msg);
-    //    }
-    //}
-
-    // 停止解压线程
-    //while (NULL != m_hH264Thread && WAIT_OBJECT_0 != MsgWaitForMultipleObjects(1, &m_hH264Thread, FALSE, 100, QS_ALLINPUT))
-    //{
-    //	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-    //	{
-    //		TranslateMessage(&msg);
-    //		DispatchMessage(&msg);
-    //	}
-    //}
-
+	// 停止播放线程
 	DWORD dwRet = -1;
 	while (NULL != m_hPlayThread && WAIT_OBJECT_0 != dwRet) // INFINITE
 	{
@@ -232,6 +213,7 @@ VOID CGFFX::Stop(VOID)
 		}
 	}
 
+	// 停止解压线程
 	dwRet = -1;
 	while (NULL != m_hPlayThread && WAIT_OBJECT_0 != dwRet) // INFINITE
 	{
@@ -513,9 +495,9 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
 		LeaveCriticalSection(&pThis->m_csDecode);
 
         if (pThis->m_fConnect
-            && NULL != pThis->m_hWnd 
-            && IsWindow(pThis->m_hWnd)
-            && IsWindowVisible(pThis->m_hWnd)
+            //&& NULL != pThis->m_hWnd 
+            //&& IsWindow(pThis->m_hWnd)
+            //&& IsWindowVisible(pThis->m_hWnd)
 			&& NULL != pThis->m_pContext
             && 0 < iDecode
 			
@@ -552,44 +534,6 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
             int iFrameWidth = pThis->m_pContext->width;
             int iFrameHeight= pThis->m_pContext->height;
             AVPixelFormat frameFormat = pThis->m_pContext->pix_fmt;
-
-            // 生成缩放因子
-            GetClientRect(pThis->m_hWnd, &rc2);
-            if (NULL == pThis->m_pSws 
-                || (rc1.right - rc1.left) / 4 * 4 != (rc2.right - rc2.left) / 4 * 4 
-                || (rc1.bottom - rc1.top) != (rc2.bottom - rc2.top)
-                || iLastWidth != iFrameWidth
-                || iLastHeight != iFrameHeight)
-            {
-                rc1 = rc2;
-                w = (rc1.right - rc1.left) / 4 * 4 ;
-                h = rc1.bottom - rc1.top;
-                hdr.biWidth = w;
-                hdr.biHeight = -h;
-                hdr.biSizeImage  = 3 * w * h;
-                iLastWidth = iFrameWidth;
-                iLastHeight = iFrameHeight;
-
-                sprintf_s(chLog, "<H264>Frame Info:%d %d %d %d width:%d height:%d FrameWidth:%d FrameHeight:%d \n", 
-                    rc2.left, rc2.right, rc2.top, rc2.bottom, w, h, iFrameWidth, iFrameHeight);
-                OutputDebugString(chLog);
-
-                // 创建位图
-                if (NULL != pThis->m_pBmp)
-                {
-                    av_free(pThis->m_pBmp);
-                    pThis->m_pBmp = NULL;
-                }
-                pThis->m_pBmp = (BYTE *)av_malloc(hdr.biSizeImage);
-
-                // 缩放
-                if (NULL != pThis->m_pSws) {
-                    sws_freeContext(pThis->m_pSws);
-                    pThis->m_pSws = NULL;
-                }
-                pThis->m_pSws = sws_getContext(iFrameWidth, iFrameHeight, 
-                    frameFormat, w, h, PIX_FMT_BGR24, SWS_BILINEAR, NULL, NULL, NULL);
-            }
 
 			static int iTryTime  = 0;
 			if (pThis->m_pDestImg == NULL)
@@ -653,23 +597,66 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
 					pTempSws = NULL;
 				}
 			}
-			
-            // 刷新显示
-            if (NULL != pThis->m_pSws)
-            {	
-                // 缩放
-                BYTE* data[4] = {pThis->m_pBmp, 0, 0, 0};
-                INT  pitch[4] = {3 * w, 0, 0, 0};
-                sws_scale(pThis->m_pSws, pFrameYUV->data, pFrameYUV->linesize, 0, iFrameHeight, data, pitch);
 
-                // 显示
-				if (IsWindow(pThis->m_hWnd))
+            // 生成缩放因子
+			if (NULL != pThis->m_hWnd  
+				&&IsWindow(pThis->m_hWnd)
+				&&IsWindowVisible(pThis->m_hWnd)
+				)
+			{
+				GetClientRect(pThis->m_hWnd, &rc2);
+				if (NULL == pThis->m_pSws 
+					|| (rc1.right - rc1.left) / 4 * 4 != (rc2.right - rc2.left) / 4 * 4 
+					|| (rc1.bottom - rc1.top) != (rc2.bottom - rc2.top)
+					|| iLastWidth != iFrameWidth
+					|| iLastHeight != iFrameHeight)
 				{
-					HDC hDC = ::GetDC(pThis->m_hWnd);
-					SetDIBitsToDevice(hDC, 0, 0, w, h, 0, 0, 0, h, pThis->m_pBmp, (BITMAPINFO *)&hdr, DIB_RGB_COLORS);
-					::ReleaseDC(pThis->m_hWnd, hDC);
+					rc1 = rc2;
+					w = (rc1.right - rc1.left) / 4 * 4 ;
+					h = rc1.bottom - rc1.top;
+					hdr.biWidth = w;
+					hdr.biHeight = -h;
+					hdr.biSizeImage  = 3 * w * h;
+					iLastWidth = iFrameWidth;
+					iLastHeight = iFrameHeight;
+
+					sprintf_s(chLog, "<H264>Frame Info:%d %d %d %d width:%d height:%d FrameWidth:%d FrameHeight:%d \n", 
+						rc2.left, rc2.right, rc2.top, rc2.bottom, w, h, iFrameWidth, iFrameHeight);
+					OutputDebugString(chLog);
+
+					// 创建位图
+					if (NULL != pThis->m_pBmp)
+					{
+						av_free(pThis->m_pBmp);
+						pThis->m_pBmp = NULL;
+					}
+					pThis->m_pBmp = (BYTE *)av_malloc(hdr.biSizeImage);
+
+					// 缩放
+					if (NULL != pThis->m_pSws) {
+						sws_freeContext(pThis->m_pSws);
+						pThis->m_pSws = NULL;
+					}
+					pThis->m_pSws = sws_getContext(iFrameWidth, iFrameHeight, 
+						frameFormat, w, h, PIX_FMT_BGR24, SWS_BILINEAR, NULL, NULL, NULL);
 				}
-            }
+				// 刷新显示
+				if (NULL != pThis->m_pSws)
+				{	
+					// 缩放
+					BYTE* data[4] = {pThis->m_pBmp, 0, 0, 0};
+					INT  pitch[4] = {3 * w, 0, 0, 0};
+					sws_scale(pThis->m_pSws, pFrameYUV->data, pFrameYUV->linesize, 0, iFrameHeight, data, pitch);
+
+					// 显示
+					if (IsWindow(pThis->m_hWnd))
+					{
+						HDC hDC = ::GetDC(pThis->m_hWnd);
+						SetDIBitsToDevice(hDC, 0, 0, w, h, 0, 0, 0, h, pThis->m_pBmp, (BITMAPINFO *)&hdr, DIB_RGB_COLORS);
+						::ReleaseDC(pThis->m_hWnd, hDC);
+					}
+				}
+			}
 
         }
 
