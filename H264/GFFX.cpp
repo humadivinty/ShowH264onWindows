@@ -358,9 +358,9 @@ DWORD WINAPI CGFFX::OnRTSPReceiveThread(VOID* pContext)
                 {
                     if (NULL != pThis->m_pReceivePacket)
                     {
-                        //av_free_packet(pThis->m_pReceivePacket);
-                        av_free(pThis->m_pReceivePacket);
-                        pThis->m_pReceivePacket = NULL;
+						av_free_packet(pThis->m_pReceivePacket);
+						//av_free(pThis->m_pReceivePacket);
+						pThis->m_pReceivePacket = NULL;
                     }
                     break; // 接收到退出信号直接退出不等了
                 }
@@ -376,10 +376,10 @@ DWORD WINAPI CGFFX::OnRTSPReceiveThread(VOID* pContext)
             pFile = fopen("Frame.txt", "a+");
             if (pFile)
             {
-            fprintf(pFile, "Error Frame: %I64d--%I64d--%d--%d--%I64d--%I64d--%d--%d--%d\n", pk->convergence_duration, pk->dts, pk->flags, pk->duration, pk->pos, pk->pts, pk->side_data_elems,
-            pk->size, pk->stream_index);
-            fclose(pFile);
-            pFile = NULL;
+				fprintf(pFile, "Error Frame: %I64d--%I64d--%d--%d--%I64d--%I64d--%d--%d--%d\n", pk->convergence_duration, pk->dts, pk->flags, pk->duration, pk->pos, pk->pts, pk->side_data_elems,
+				pk->size, pk->stream_index);
+				fclose(pFile);
+				pFile = NULL;
             }
             */
 
@@ -388,6 +388,14 @@ DWORD WINAPI CGFFX::OnRTSPReceiveThread(VOID* pContext)
                 OutputDebugString("<H264>Decode is running!\n");
                 Sleep(20);
             }
+
+			if (NULL != pThis->m_pReceivePacket)
+			{
+				// 用av_malloc申请的内存，结构体内部指针并非为NULL，接收到有误的包不能用这个函数把数据置0
+				av_free_packet(pThis->m_pReceivePacket);
+				//av_free(pThis->m_pReceivePacket);
+				pThis->m_pReceivePacket = NULL;
+			}
 
             // 删除连接
             if (NULL != pThis->m_pContext)
@@ -402,19 +410,12 @@ DWORD WINAPI CGFFX::OnRTSPReceiveThread(VOID* pContext)
                 avformat_close_input(&pThis->m_pFormatCtx);
                 pThis->m_pFormatCtx = NULL;
             }
-            if (NULL != pThis->m_pReceivePacket)
-            {
-                // 用av_malloc申请的内存，结构体内部指针并非为NULL，接收到有误的包不能用这个函数把数据置0
-                //av_free_packet(pThis->m_pReceivePacket); 
-                av_free(pThis->m_pReceivePacket);
-                pThis->m_pReceivePacket = NULL;
-            }
         }
         else if (NULL != pThis->m_pReceivePacket->data)
-        {	
+        {
 			if (pThis->m_pReceivePacket->stream_index == pThis->m_iVideoStream)
 			{
-				// 统计帧率			
+				// 统计帧率
 				if (!dwFrames++)
 				{
 					dwTime = GetTickCount();
@@ -441,9 +442,9 @@ DWORD WINAPI CGFFX::OnRTSPReceiveThread(VOID* pContext)
         // 释放一个rtsp包
         if (NULL != pThis->m_pReceivePacket)
         {
-            //av_free_packet(pThis->m_pReceivePacket);
-            av_free(pThis->m_pReceivePacket);
-            pThis->m_pReceivePacket = NULL;
+			av_free_packet(pThis->m_pReceivePacket);
+			//av_free(pThis->m_pReceivePacket);
+			pThis->m_pReceivePacket = NULL;
         }
     }
 	OutputDebugString("Exit OnRTSPReceiveThread.\n");

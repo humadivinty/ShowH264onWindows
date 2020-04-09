@@ -30,7 +30,7 @@ VOID WINAPI H264_SetExitStatus(HANDLE hPlay)
 	CGFFX* gffx = (CGFFX *)hPlay;
 	if (NULL != gffx)
 	{
-        gffx->SetExitStatus();
+		gffx->SetExitStatus();
 	}
 }
 
