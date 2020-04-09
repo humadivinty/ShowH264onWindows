@@ -30,3 +30,21 @@
 *.exe
 *.out
 *.app
+*.pdb
+*.ini
+
+#middle files
+DEBUG/
+debug/
+RELEASE/
+release/
+ipch/
+build/
+BUILD/
+
+#compress files
+*.rar
+*.sdf
+*.suo
+*.log
+*.ncb

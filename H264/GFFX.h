@@ -24,7 +24,6 @@ public:
     VOID SetExitStatus();
 	bool GetOneBmpImg(PBYTE DestImgData, int& iLength, int& iWidth, int& iHeight);
 
-	CRITICAL_SECTION m_csDecode;
 protected:
 	HRESULT Connect(VOID);
 
