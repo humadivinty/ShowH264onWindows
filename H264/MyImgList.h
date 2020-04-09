@@ -1,20 +1,9 @@
 ﻿#pragma once
-//#include <array>
-//#include <windows.h>
 #include<stdio.h>
-//#include"imageFunction.h"
-
-#ifdef USE_LINUX
-
-#else
-#include <Windows.h>
-
-#endif // WINDOWS
-
+#include <mutex>
 
 #define MAX_IMG_BUFFER_SIZE 10*1024*1024
 #define MAX_ARRAY_SIZE 5
-
 
 typedef struct tag_IMG_BMP
 {
@@ -27,15 +16,16 @@ typedef struct tag_IMG_BMP
     int height;
     int ImgLength;
 
-    tag_IMG_BMP()
+    tag_IMG_BMP():
+		pData(NULL)
+		, type(0)
+		, iunUse(0)
+		, iBufferLenth(0)
+		, width(0)
+		, height(0)
+		, ImgLength(0)
     {
-        pData = NULL;
-        type = 0;
 
-        iBufferLenth = 0;
-        width = 0;
-        height = 0;
-        ImgLength = 0;
     }
 
     ~tag_IMG_BMP()
@@ -71,12 +61,9 @@ private:
     //std::array<IMG_BMP*, MAX_ARRAY_SIZE> m_ImgArray;
     IMG_BMP* m_ImgArray2[MAX_ARRAY_SIZE];
 
-#ifdef USE_LINUX
-    ThreadMutex m_mutexList;
-#else
-    CRITICAL_SECTION m_csList;
-#endif
     int m_iMaxSize;
     int m_iCurIndex;
+
+	std::mutex m_mtx;
 };
 
