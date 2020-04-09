@@ -359,7 +359,7 @@ DWORD WINAPI CGFFX::OnRTSPReceiveThread(VOID* pContext)
                     if (NULL != pThis->m_pReceivePacket)
                     {
 						av_free_packet(pThis->m_pReceivePacket);
-						//av_free(pThis->m_pReceivePacket);
+						av_free(pThis->m_pReceivePacket);
 						pThis->m_pReceivePacket = NULL;
                     }
                     break; // 接收到退出信号直接退出不等了
@@ -393,7 +393,7 @@ DWORD WINAPI CGFFX::OnRTSPReceiveThread(VOID* pContext)
 			{
 				// 用av_malloc申请的内存，结构体内部指针并非为NULL，接收到有误的包不能用这个函数把数据置0
 				av_free_packet(pThis->m_pReceivePacket);
-				//av_free(pThis->m_pReceivePacket);
+				av_free(pThis->m_pReceivePacket);
 				pThis->m_pReceivePacket = NULL;
 			}
 
@@ -443,7 +443,7 @@ DWORD WINAPI CGFFX::OnRTSPReceiveThread(VOID* pContext)
         if (NULL != pThis->m_pReceivePacket)
         {
 			av_free_packet(pThis->m_pReceivePacket);
-			//av_free(pThis->m_pReceivePacket);
+			av_free(pThis->m_pReceivePacket);
 			pThis->m_pReceivePacket = NULL;
         }
     }
