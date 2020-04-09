@@ -412,19 +412,22 @@ DWORD WINAPI CGFFX::OnRTSPReceiveThread(VOID* pContext)
         }
         else if (NULL != pThis->m_pReceivePacket->data)
         {	
-            // 统计帧率			
-            if (!dwFrames++)
-            {
-                dwTime = GetTickCount();
-            }
-            else if (GetTickCount() - dwTime > 10000)			
-            {
-                pThis->m_lFps = 1000 * dwFrames / (GetTickCount() - dwTime);
-                dwFrames = 0;
-                //char chLog[128] = {0};
-                //sprintf_s(chLog, "<H264>Frame 帧率:%d\n", pThis->m_lFps);
-                //OutputDebugString(chLog);
-            }
+			if (pThis->m_pReceivePacket->stream_index == pThis->m_iVideoStream)
+			{
+				// 统计帧率			
+				if (!dwFrames++)
+				{
+					dwTime = GetTickCount();
+				}
+				else if (GetTickCount() - dwTime > 10000)
+				{
+					pThis->m_lFps = 1000 * dwFrames / (GetTickCount() - dwTime);
+					dwFrames = 0;
+					//char chLog[128] = {0};
+					//sprintf_s(chLog, "<H264>Frame 帧率:%d\n", pThis->m_lFps);
+					//OutputDebugString(chLog);
+				}
+			}
 
             // 压入队列
             if (100 > gvp_queue_size(pThis->m_hQueue)
