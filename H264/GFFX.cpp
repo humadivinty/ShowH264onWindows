@@ -427,7 +427,8 @@ DWORD WINAPI CGFFX::OnRTSPReceiveThread(VOID* pContext)
             }
 
             // 压入队列
-            if (100 > gvp_queue_size(pThis->m_hQueue))
+            if (100 > gvp_queue_size(pThis->m_hQueue)
+				&& pThis->m_pReceivePacket->stream_index == pThis->m_iVideoStream)
             {
                 gvp_enqueue(pThis->m_hQueue, pThis->m_pReceivePacket, sizeof(pThis->m_pReceivePacket));
                 pThis->m_pReceivePacket = NULL;
@@ -708,7 +709,19 @@ HRESULT CGFFX::Connect(VOID)
     // 设置缓冲区大小
     av_dict_set(&opts, "bufsize", "655350", 0);
     // 设置超时时间间隔x秒[单位为微秒]
-    av_dict_set(&opts, "stimeout", "50000", 0);
+	av_dict_set(&opts, "stimeout", "500000", 0);
+
+	////设置缓存大小，1080p可将值调大
+	//av_dict_set(&opts, "buffer_size", "1024000", 0);
+	////以udp方式打开，如果以tcp方式打开将udp替换为tcp
+	//av_dict_set(&opts, "rtsp_transport", "tcp", 0);
+	//// 设置超时时间间隔x秒[单位为u秒] 如果没有设置stimeout，那么把ipc网线拔掉，av_read_frame会阻塞（时间单位是u妙) 设置超时3秒
+	//av_dict_set(&opts, "stimeout", "3000000", 0);
+	//// 设置最大时延  缓冲长，应该是在计算收到视频的帧率。你发udp包，没有帧率信息，ffplay可能会缓很多帧
+	//av_dict_set(&opts, "max_delay", "5000", 0);
+
+	//av_dict_set(&opts, "preset", "superfast", 0);
+	//av_dict_set(&opts, "tune", "zerolatency", 0);
 
     //av_log_set_level(AV_LOG_DEBUG);
 
