@@ -6,12 +6,17 @@
 #include "TestRTSP.h"
 #include "TestRTSPDlg.h"
 #include "afxdialogex.h"
+#include <iostream>
+#include <fstream>
+#include <string>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
+#define MAX_IMG_BUF_SIZE (20*1024*1024)
 
+bool SaveFile(const char* fileName, void* buf, size_t bufSize);
 // CTestRTSPDlg 对话框
 
 
@@ -33,6 +38,7 @@ BEGIN_MESSAGE_MAP(CTestRTSPDlg, CDialogEx)
     ON_WM_QUERYDRAGICON()
     ON_BN_CLICKED(IDC_BUTTON_OPEN, &CTestRTSPDlg::OnBnClickedButtonOpen)
     ON_BN_CLICKED(IDC_BUTTON_CLOSE, &CTestRTSPDlg::OnBnClickedButtonClose)
+	ON_BN_CLICKED(IDC_BUTTON_Capture, &CTestRTSPDlg::OnBnClickedButtonCapture)
 END_MESSAGE_MAP()
 
 
@@ -49,6 +55,7 @@ BOOL CTestRTSPDlg::OnInitDialog()
 
     // TODO: 在此添加额外的初始化代码
     Init();
+	m_pImgBuf = new unsigned char[MAX_IMG_BUF_SIZE];
 
     return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -137,4 +144,57 @@ void CTestRTSPDlg::OnBnClickedButtonClose()
         H264_Destroy(m_hPlayer);
         m_hPlayer = NULL;
     }
+}
+
+
+void CTestRTSPDlg::OnBnClickedButtonCapture()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CString strLog;
+	if (m_hPlayer != NULL)
+	{
+		int iBufSize = MAX_IMG_BUF_SIZE;
+		if (m_pImgBuf)
+		{
+			memset(m_pImgBuf, 0, iBufSize);
+		}		
+		int iWidth = 0;
+		int iHeight = 0;
+		bool bRet = H264_GetOneBmpImg(m_hPlayer, m_pImgBuf, iBufSize, iWidth, iHeight);
+
+		if (bRet)
+		{
+			SaveFile("Captrue.bmp", m_pImgBuf, iBufSize);
+		}
+
+		strLog.Format("H264_GetOneBmpImg = %d, image length= %d, width= %d, height= %d  ", bRet, iBufSize, iWidth, iHeight);
+	}
+	else
+	{
+		strLog.Format("H264 handle is NULL  ");
+	}
+	MessageBox(strLog);	
+}
+
+bool SaveFile(const char* fileName, void* buf, size_t bufSize)
+{
+	if (NULL == fileName
+		|| NULL == buf
+		|| 0 >= bufSize)
+	{
+		return false;
+	}
+	std::string filename(fileName);
+	std::fstream fs(filename, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
+	if (!fs.is_open( ))
+	{
+		std::cout << "failed to open " << filename << '\n';
+		return false;
+	}
+	else
+	{
+		fs.write(reinterpret_cast<char*>(buf), bufSize);
+		fs.close();
+		return true;
+	}
 }

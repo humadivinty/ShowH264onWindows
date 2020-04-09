@@ -3,7 +3,7 @@
 #include <mutex>
 
 #define MAX_IMG_BUFFER_SIZE 10*1024*1024
-#define MAX_ARRAY_SIZE 5
+#define MAX_ARRAY_SIZE 3
 
 typedef struct tag_IMG_BMP
 {

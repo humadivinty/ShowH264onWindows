@@ -480,6 +480,7 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
 
     int pk_size = 0;
     char chLog[256] = {0};
+	int iTryTime = 0;
     // 循环解压数据
     while (pThis->m_fRunning)
     {
@@ -530,8 +531,7 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
             int iFrameWidth = pThis->m_pContext->width;
             int iFrameHeight= pThis->m_pContext->height;
             AVPixelFormat frameFormat = pThis->m_pContext->pix_fmt;
-
-			static int iTryTime  = 0;
+			
 			if (pThis->m_pDestImg == NULL)
 			{
 				pThis->m_pDestImg = new BYTE[MAX_IMG_SIZE];

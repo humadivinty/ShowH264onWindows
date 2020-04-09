@@ -32,6 +32,7 @@ protected:
 
 private:
     HANDLE m_hPlayer; // ²¥·ÅÆ÷
+	unsigned char* m_pImgBuf;
 
     void Init();
 
@@ -40,4 +41,5 @@ public:
     afx_msg void OnBnClickedButtonOpen();
     afx_msg void OnBnClickedButtonClose();
     virtual BOOL PreTranslateMessage(MSG* pMsg);
+	afx_msg void OnBnClickedButtonCapture();
 };
