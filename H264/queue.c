@@ -136,6 +136,7 @@ void gvp_wait_signal_queue(void* pq)
 
 }
 
+// 压入队列
 int gvp_enqueue(void* pq, void* data, int length)
 {
 	gq_elem* pqelem = (gq_elem*)malloc(sizeof(gq_elem));
@@ -155,6 +156,7 @@ int gvp_enqueue(void* pq, void* data, int length)
 	return 1;
 }
 
+// 拷贝型压入队列
 int gvp_enqueue_alloc(void* pq, void* data, int length)
 {
 	char* p = (char*)malloc(length + 1);
@@ -162,6 +164,7 @@ int gvp_enqueue_alloc(void* pq, void* data, int length)
 	return gvp_enqueue(pq, p, length);
 }
 
+// 取出队列
 int gvp_dequeue(void* pq, void** data, int* length, int block)
 {
 	int first = 1;

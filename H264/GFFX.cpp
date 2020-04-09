@@ -121,6 +121,7 @@ CGFFX::~CGFFX(void)
 {
     Stop();
     gvp_delete_queue(m_hQueue);
+	m_hQueue = NULL;
 
 	if (m_pSrcImg)
 	{
@@ -286,6 +287,7 @@ VOID CGFFX::Stop(VOID)
     // 关闭解码
     if (NULL != m_pContext)
     {
+		avcodec_flush_buffers(m_pContext);
         avcodec_close(m_pContext);
         av_free(m_pContext);
         m_pContext = NULL;
@@ -475,7 +477,7 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
     char chLog[256] = {0};
     // 循环解压数据
     while (pThis->m_fRunning)
-    {	
+    {
         // 等待数据
         gvp_dequeue(pThis->m_hQueue, (void **)&pThis->m_pDecodePacket, &pk_size, 1);
         if (NULL == pThis->m_pDecodePacket) {      
@@ -688,10 +690,6 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
         av_free(pThis->m_pBmp);
         pThis->m_pBmp = NULL;
     }
-    if (NULL != pThis->m_pContext)
-    {
-        avcodec_flush_buffers(pThis->m_pContext);
-    }
 
     return 0;
 }
@@ -723,19 +721,20 @@ HRESULT CGFFX::Connect(VOID)
         m_pFormatCtx = NULL;
         return E_FAIL;
     }
-    av_dict_free(&opts);
 
     // 缩短提取流信息的时间
     m_pFormatCtx->probesize = 100 * 1024;
     m_pFormatCtx->max_analyze_duration = 5 * AV_TIME_BASE;
 
     // 从文件提取流信息
-    if (!m_fRunning || 0 > avformat_find_stream_info(m_pFormatCtx, NULL) || !m_pFormatCtx->nb_streams)
+    if (!m_fRunning || 0 > avformat_find_stream_info(m_pFormatCtx, &opts) || !m_pFormatCtx->nb_streams)
     {
         avformat_close_input(&m_pFormatCtx);
+        av_dict_free(&opts);
         m_pFormatCtx = NULL;
         return E_FAIL;
     }
+    av_dict_free(&opts);
 
     // 查找视频原始流的下标
     m_iVideoStream = -1;
