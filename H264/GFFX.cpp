@@ -214,7 +214,7 @@ VOID CGFFX::Stop(VOID)
 
 	// Õ£÷πΩ‚—πœﬂ≥Ã
 	dwRet = -1;
-	while (NULL != m_hPlayThread && WAIT_OBJECT_0 != dwRet) // INFINITE
+	while (NULL != m_hH264Thread && WAIT_OBJECT_0 != dwRet) // INFINITE
 	{
 		dwRet = MsgWaitForMultipleObjects(1, &m_hH264Thread, FALSE, 100, QS_ALLINPUT);
 		if (dwRet == WAIT_OBJECT_0 + 1)
