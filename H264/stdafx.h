@@ -14,3 +14,16 @@
 
 
 // TODO: reference additional headers your program requires here
+#define SAFE_DELETE_OBJ(obj) \
+if (NULL != obj)                                  \
+{                                           \
+    delete obj;                        \
+    obj = NULL;                      \
+}
+
+#define SAFE_DELETE_ARRAY(arrayObj) \
+if (NULL != arrayObj)                                  \
+{                                           \
+    delete[] arrayObj;                        \
+    arrayObj = NULL;                      \
+}

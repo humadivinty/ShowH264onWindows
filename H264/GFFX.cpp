@@ -111,8 +111,10 @@ CGFFX::CGFFX()
     m_pSws = NULL;
     m_pBmp = NULL;
 
+#ifdef USE_CAPTURE
 	m_pSrcImg = NULL;
 	m_pDestImg = NULL;
+#endif
 
     m_hQueue = gvp_create_new_queue();
 }
@@ -123,16 +125,10 @@ CGFFX::~CGFFX(void)
     gvp_delete_queue(m_hQueue);
 	m_hQueue = NULL;
 
-	if (m_pSrcImg)
-	{
-		delete[] m_pSrcImg;
-		m_pSrcImg = NULL;
-	}
-	if (m_pDestImg)
-	{
-		delete[] m_pDestImg;
-		m_pDestImg = NULL;
-	}
+#ifdef USE_CAPTURE
+	SAFE_DELETE_ARRAY(m_pSrcImg);
+	SAFE_DELETE_ARRAY(m_pDestImg);
+#endif
 }
 
 // 视频库初始化
@@ -531,7 +527,8 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
             int iFrameWidth = pThis->m_pContext->width;
             int iFrameHeight= pThis->m_pContext->height;
             AVPixelFormat frameFormat = pThis->m_pContext->pix_fmt;
-			
+
+#ifdef USE_CAPTURE
 			if (pThis->m_pDestImg == NULL)
 			{
 				pThis->m_pDestImg = new BYTE[MAX_IMG_SIZE];
@@ -593,7 +590,7 @@ DWORD WINAPI CGFFX::OnH264DecodeThread(VOID* pContext)
 					pTempSws = NULL;
 				}
 			}
-
+#endif
             // 生成缩放因子
 			if (NULL != pThis->m_hWnd  
 				&&IsWindow(pThis->m_hWnd)
@@ -822,6 +819,7 @@ bool CGFFX::GetOneBmpImg(PBYTE DestImgData, int& iLength, int& iWidth, int& iHei
 	{
 		return false;
 	}
+#ifdef USE_CAPTURE
 	IMG_BMP* pTempImg = NULL;
 	pTempImg = m_lBmplist.getOneIMG();
 	if (!pTempImg)
@@ -839,10 +837,9 @@ bool CGFFX::GetOneBmpImg(PBYTE DestImgData, int& iLength, int& iWidth, int& iHei
 	iHeight = pTempImg->height;
 	memcpy(DestImgData, pTempImg->pData, pTempImg->ImgLength);
 
-	if (pTempImg)
-	{
-		delete pTempImg;
-		pTempImg = NULL;
-	}
+	SAFE_DELETE_OBJ(pTempImg);
 	return true;
+#else
+	return false;
+#endif
 }

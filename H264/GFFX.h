@@ -58,9 +58,10 @@ private:
 	long m_lRecordSecond;
 	long m_iStartRecordTime;
 
-
+#ifdef USE_CAPTURE
 	PBYTE m_pSrcImg;
 	PBYTE m_pDestImg;
 	MyImgList m_lBmplist;
+#endif
 };
 
